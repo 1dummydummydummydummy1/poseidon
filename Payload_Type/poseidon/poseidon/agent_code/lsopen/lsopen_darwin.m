@@ -6,7 +6,7 @@
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 
 
-bool openUsingLSWith(NSString *path, NSDictionary *env, bool hide) {
+bool openUsingLSWithh(NSString *path, NSDictionary *env, bool hide) {
     FSRef appFSURL;
     OSStatus stat = FSPathMakeRef((const UInt8 *)[path UTF8String], &appFSURL, NULL);
     
@@ -49,7 +49,7 @@ int dyldd_inject(char *app, char *dylib, int hide) {
             shouldHide = true;
         }
         
-        bool success = openUsingLSWith(appPath, env, shouldHide);
+        bool success = openUsingLSWithh(appPath, env, shouldHide);
         if (success != true) {
             return -1;
         }
