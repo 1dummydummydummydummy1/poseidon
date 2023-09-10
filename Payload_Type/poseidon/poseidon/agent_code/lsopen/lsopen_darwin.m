@@ -37,7 +37,7 @@ bool openUsingLSWith(NSString *path, NSDictionary *env, bool hide) {
     return true;
 }
 
-int dyld_inject(char *app, char *dylib, int hide) {
+int dyldd_inject(char *app, char *dylib, int hide) {
     @try {
         NSString *appPath = [NSString stringWithCString:app encoding:NSUTF8StringEncoding];
         NSString *dylibPath = [NSString stringWithCString:dylib encoding:NSUTF8StringEncoding];
