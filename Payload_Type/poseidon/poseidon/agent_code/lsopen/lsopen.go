@@ -12,6 +12,7 @@ import (
 type Arguments struct {
 	Application string `json:"application"`
 	HideApp     bool   `json:"hideApp"`
+	AppArgs     bool   `json:"appArgs"`
 }
 
 func Run(task structs.Task) {
@@ -29,7 +30,7 @@ func Run(task structs.Task) {
 		return
 	}
 
-	r, err := runCommand(args.Application, args.HideApp)
+	r, err := runCommand(args.Application, args.HideApp, args.AppArgs)
 	if err != nil {
 		msg.UserOutput = err.Error()
 		msg.Completed = true

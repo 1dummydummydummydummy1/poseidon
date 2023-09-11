@@ -6,7 +6,7 @@
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 
 
-bool openUsingLSWithh(NSString *path, NSDictionary *env, bool hide) {
+bool openUsingLSWithh(NSString *path, NSDictionary *env, bool hide, NSArray<NSString*> *arghhhs) {
     FSRef appFSURL;
     OSStatus stat = FSPathMakeRef((const UInt8 *)[path UTF8String], &appFSURL, NULL);
     
@@ -24,8 +24,8 @@ bool openUsingLSWithh(NSString *path, NSDictionary *env, bool hide) {
     }
 
     appParam.application = &appFSURL;
-    
-    appParam.argv = NULL;
+    appParam.argv = (__bridge CFArrayRef) arghhhs;
+    //appParam.argv = NULL;
     appParam.environment = (__bridge CFDictionaryRef)env;
     appParam.asyncLaunchRefCon = NULL;
     appParam.initialEvent = NULL;
@@ -37,7 +37,7 @@ bool openUsingLSWithh(NSString *path, NSDictionary *env, bool hide) {
     return true;
 }
 
-int dyldd_inject(char *app, int hide) {
+int dyldd_inject(char *app, int hide, char * argv[], int argc) {
     @try {
         NSString *appPath = [NSString stringWithCString:app encoding:NSUTF8StringEncoding];
         
@@ -47,8 +47,17 @@ int dyldd_inject(char *app, int hide) {
         if (hide == 1) {
             shouldHide = true;
         }
+
+        NSMutableArray *argarray = [NSMutableArray array];
+        for (int i = 0; i < argc; i++) {
+            NSString *str = [[NSString alloc] initWithCString:argv[i] encoding:NSUTF8StringEncoding];
+            [argarray addObject:str];
+        }
+
+        NSRange rng = NSMakeRange(2, argc -2);
+        NSArray* applicationargs = [argarray subarrayWithRange:rng];
         
-        bool success = openUsingLSWithh(appPath, env, shouldHide);
+        bool success = openUsingLSWithh(appPath, env, shouldHide,applicationargs);
         if (success != true) {
             return -1;
         }
