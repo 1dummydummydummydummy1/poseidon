@@ -17,9 +17,8 @@ func (j *DyldInjectDarwin) Success() bool {
 	return j.Successful
 }
 
-func runCommand(app string, dylib string, hide bool) (DyldInjectDarwin, error) {
+func runCommand(app string, hide bool) (DyldInjectDarwin, error) {
 	capp := C.CString(app)
-	cdylib := C.CString(dylib)
 
 	var chide int
 
@@ -30,7 +29,7 @@ func runCommand(app string, dylib string, hide bool) (DyldInjectDarwin, error) {
 	}
 
 	ihide := C.int(chide)
-	res := C.dyldd_inject(capp, cdylib, ihide)
+	res := C.dyldd_inject(capp, ihide)
 
 	r := DyldInjectDarwin{}
 	if res == 0 {

@@ -11,7 +11,6 @@ import (
 
 type Arguments struct {
 	Application string `json:"application"`
-	Dylibpath   string `json:"dylibpath"`
 	HideApp     bool   `json:"hideApp"`
 }
 
@@ -30,7 +29,7 @@ func Run(task structs.Task) {
 		return
 	}
 
-	r, err := runCommand(args.Application, args.Dylibpath, args.HideApp)
+	r, err := runCommand(args.Application, args.HideApp)
 	if err != nil {
 		msg.UserOutput = err.Error()
 		msg.Completed = true
@@ -40,7 +39,7 @@ func Run(task structs.Task) {
 	}
 
 	if r.Successful {
-		msg.UserOutput = "successfully spawned application with DYLD_INSERT_LIBRARIES"
+		msg.UserOutput = "successfully spawned application"
 		msg.Completed = true
 		task.Job.SendResponses <- msg
 	} else {
