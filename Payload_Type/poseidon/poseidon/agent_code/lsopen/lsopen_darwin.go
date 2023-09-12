@@ -10,6 +10,7 @@ package lsopen
 */
 import "C"
 import "unsafe"
+import "os"
 
 type DyldInjectDarwin struct {
 	Successful bool
@@ -22,6 +23,8 @@ func (j *DyldInjectDarwin) Success() bool {
 func runCommand(app string, hide bool, args []string) (DyldInjectDarwin, error) {
 	capp := C.CString(app)
 
+	var c_argc C.int = 0
+	var c_argv **C.char = nil
 	var chide int
 
 	if hide {

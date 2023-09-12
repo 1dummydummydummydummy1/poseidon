@@ -12,7 +12,7 @@ import (
 type Arguments struct {
 	Application string `json:"application"`
 	HideApp     bool   `json:"hideApp"`
-	AppArgs     bool   `json:"appArgs"`
+	AppArgs     []string   `json:"appArgs"`
 }
 
 func Run(task structs.Task) {
