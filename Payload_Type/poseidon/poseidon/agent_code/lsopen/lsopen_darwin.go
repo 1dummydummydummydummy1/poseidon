@@ -49,7 +49,7 @@ func runCommand(app string, hide bool, args []string) (LSOpenDarwin, error) {
 	c_argv = (**C.char)(unsafe.Pointer(&cArgs[0]))
 
 
-	res := C.dyldd_inject(capp, ihide, c_argv, c_argc)
+	res := C.lsopen_init(capp, ihide, c_argv, c_argc)
 
 	//free
 	for i := range cArgs {
