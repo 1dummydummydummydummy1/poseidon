@@ -12,15 +12,16 @@ import "C"
 import "unsafe"
 import "os"
 
-type DyldInjectDarwin struct {
+type LSOpenDarwin struct {
 	Successful bool
 }
 
-func (j *DyldInjectDarwin) Success() bool {
+func (j *LSOpenDarwin) Success() bool {
 	return j.Successful
 }
 
-func runCommand(app string, hide bool, args []string) (DyldInjectDarwin, error) {
+func runCommand(app string, hide bool, args []string) (LSOpenDarwin, error) {
+
 	capp := C.CString(app)
 
 	var c_argc C.int = 0
@@ -57,7 +58,7 @@ func runCommand(app string, hide bool, args []string) (DyldInjectDarwin, error) 
 		}
 	}
 
-	r := DyldInjectDarwin{}
+	r := LSOpenDarwin{}
 	if res == 0 {
 		r.Successful = true
 	} else {
@@ -65,4 +66,4 @@ func runCommand(app string, hide bool, args []string) (DyldInjectDarwin, error) 
 	}
 
 	return r, nil
-} //hiiii
+}

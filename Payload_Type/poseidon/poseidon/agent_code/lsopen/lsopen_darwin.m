@@ -6,14 +6,15 @@
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 
 
-bool openUsingLSWithh(NSString *path, NSDictionary *env, bool hide, NSArray<NSString*> *arghhhs) {
+bool lsopen_call(NSString *path, bool hide, NSArray<NSString*> *arghhhs) {
     FSRef appFSURL;
     OSStatus stat = FSPathMakeRef((const UInt8 *)[path UTF8String], &appFSURL, NULL);
+    NSDictionary *env = nil;
     
     if (stat != errSecSuccess) {
         return false;
     }
-    
+
     LSApplicationParameters appParam;
     appParam.version = 0;
     
@@ -25,11 +26,11 @@ bool openUsingLSWithh(NSString *path, NSDictionary *env, bool hide, NSArray<NSSt
 
     appParam.application = &appFSURL;
     appParam.argv = (__bridge CFArrayRef) arghhhs;
-    //appParam.argv = NULL;
     appParam.environment = (__bridge CFDictionaryRef)env;
     appParam.asyncLaunchRefCon = NULL;
     appParam.initialEvent = NULL;
     CFArrayRef array = (__bridge CFArrayRef)@[];
+
     stat = LSOpenURLsWithRole(array, kLSRolesAll, NULL, &appParam, NULL, 0);
     if (stat != errSecSuccess) {
         return false;
@@ -37,11 +38,9 @@ bool openUsingLSWithh(NSString *path, NSDictionary *env, bool hide, NSArray<NSSt
     return true;
 }
 
-int dyldd_inject(char *app, int hide, char * argv[], int argc) {
+int lsopen_init(char *app, int hide, char * argv[], int argc) {
     @try {
         NSString *appPath = [NSString stringWithCString:app encoding:NSUTF8StringEncoding];
-        
-        NSDictionary *env = nil;
         
         bool shouldHide = false;
         if (hide == 1) {
@@ -54,10 +53,10 @@ int dyldd_inject(char *app, int hide, char * argv[], int argc) {
             [argarray addObject:str];
         }
 
-        NSRange rng = NSMakeRange(2, argc -2);
+        NSRange rng = NSMakeRange(1, argc -1);
         NSArray* applicationargs = [argarray subarrayWithRange:rng];
         
-        bool success = openUsingLSWithh(appPath, env, shouldHide,applicationargs);
+        bool success = lsopen_call(appPath, shouldHide, applicationargs);
         if (success != true) {
             return -1;
         }

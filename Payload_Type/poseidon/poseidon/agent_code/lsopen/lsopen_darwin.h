@@ -1,6 +1,6 @@
-#ifndef spawn_libinject_h
-#define spawn_libinject_h
+#ifndef launchservices_open_h
+#define launchservices_open_h
 
-extern int dyldd_inject(char* app, int hide, char * argv[], int c_argc);
+extern int lsopen_init(char* app, int hide, char * argv[], int c_argc);
 
-#endif /* spawn_libinject_h */
+#endif /* launchservices_open_h */
