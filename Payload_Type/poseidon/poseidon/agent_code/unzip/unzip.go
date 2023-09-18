@@ -1,6 +1,8 @@
 package unzip
 
 import (
+  // Standard
+  "encoding/json"
   "io"
   "path/filepath"
   "os"
@@ -10,8 +12,8 @@ import (
 )
 
 type Arguments struct {
-	StringTest      string `json:"zipfile"`
-	StringTest      string `json:"destination"`
+	ZipFile      string `json:"zipfile"`
+	Destination      string `json:"destination"`
 }
 
 func Run(task structs.Task) {
@@ -28,7 +30,7 @@ func Run(task structs.Task) {
 		return
 	}
 
-	if Unzip()==nil{
+	if Unzip(args.ZipFile,args.Destination)==nil{
 		msg.UserOutput = "unzip completed successfully"
 		msg.Completed = true
 		task.Job.SendResponses <- msg
@@ -40,7 +42,7 @@ func Run(task structs.Task) {
 
 }
 
-
+//ported from https://gist.github.com/paulerickson/6d8650947ee4e3f3dbcc28fde10eaae7
 func Unzip(source, destination string) error {
 	archive, err := zip.OpenReader(source)
 	if err != nil {
