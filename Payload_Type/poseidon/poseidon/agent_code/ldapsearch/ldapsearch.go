@@ -2,7 +2,7 @@ package ldapsearch
 
 import (
   // Standard
-  "encoding/json""
+  "encoding/json"
   "os"
   "fmt"
   "strings"
