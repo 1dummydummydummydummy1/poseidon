@@ -3,7 +3,6 @@ package ldapsearch
 import (
   // Standard
   "encoding/json"
-  "os"
   "fmt"
   "strings"
   "gopkg.in/ldap.v2"
@@ -13,13 +12,21 @@ import (
 )
 
 type Arguments struct {
-	      ServerAddress      string `json:"serveraddress"`
-	      BindUser      string `json:"binduser"`
+	ServerAddress      string `json:"serveraddress"`
+	BindUser      string `json:"binduser"`
         BindPassword      string `json:"bindpassword"`
         SearchFilter      string `json:"searchfilter"`
         BaseSearchDN      string `json:"basesearchdn"`
 
 }
+
+var(
+   serverAddress = ""
+   bindUser = ""
+   bindPassword = ""
+   searchFilter = ""
+   baseSearchDN = ""
+)
 
 func Run(task structs.Task) {
 	msg := structs.Response{}
@@ -48,31 +55,32 @@ func Run(task structs.Task) {
 }
 
 func LDAPSearch(serveraddress, binduser, bindpassword, searchfilter, basesearchdn string) error {
-serverAddress = serveraddress 
-bindUser = binduser
-bindPassword = bindpassword
-searchFilter = searchfilter
-baseSearchDN = basesearchdn
 
+  serverAddress = serveraddress
+  bindUser = binduser
+  bindPassword = bindpassword
+  searchFilter = searchfilter
+  baseSearchDN = basesearchdn
 
   conn, err := establishConnection()
 
   if err != nil {
     fmt.Printf("Connection failed. %s", err)
-    return
+    return err
   }
 
   defer conn.Close()
 
   if err := listEntries(conn); err != nil {
     fmt.Printf("%v", err)
-    return
+    return err
   }
 
   if err := authenticateUser(conn); err != nil {
     fmt.Printf("%v", err)
-    return
+    return err
   }
+return nil
 }
 
 
