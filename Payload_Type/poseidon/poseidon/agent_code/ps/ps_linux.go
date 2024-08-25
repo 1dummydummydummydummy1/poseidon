@@ -1,3 +1,4 @@
+//go:build linux
 // +build linux
 
 package ps
@@ -16,15 +17,16 @@ import (
 // UnixProcess is an implementation of Process
 // that contains Unix-specific fields and information.
 type UnixProcess struct {
-	pid          int
-	ppid         int
-	state        rune
-	pgrp         int
-	sid          int
-	architecture string
-	binary       string
-	owner        string
-	bin_path     string
+	pid            int
+	ppid           int
+	state          rune
+	pgrp           int
+	sid            int
+	architecture   string
+	binary         string
+	owner          string
+	bin_path       string
+	additionalInfo map[string]interface{}
 }
 
 // Pid returns the process identifier
@@ -59,8 +61,8 @@ func (p *UnixProcess) ProcessArguments() []string {
 	return []string{""}
 }
 
-func (p *UnixProcess) ProcessEnvironment() map[string]interface{} {
-	var emptyMap map[string]interface{}
+func (p *UnixProcess) ProcessEnvironment() map[string]string {
+	var emptyMap map[string]string
 	return emptyMap
 }
 
@@ -79,6 +81,9 @@ func (p *UnixProcess) Name() string {
 
 func (p *UnixProcess) BundleID() string {
 	return ""
+}
+func (p *UnixProcess) AdditionalInfo() map[string]interface{} {
+	return map[string]interface{}{}
 }
 
 func getProcessCmdline(pid int) string {

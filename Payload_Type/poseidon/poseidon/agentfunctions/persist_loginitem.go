@@ -2,6 +2,7 @@ package agentfunctions
 
 import (
 	"errors"
+	"fmt"
 
 	agentstructs "github.com/MythicMeta/MythicContainer/agent_structs"
 )
@@ -12,8 +13,8 @@ func init() {
 		Description:         "Add a login item for the current user via the LSSharedFileListInsertItemURL function",
 		HelpString:          "persist_loginitem",
 		Version:             1,
-		Author:              "@xorrior",
-		MitreAttackMappings: []string{"T1547.011", "T1547.015"},
+		Author:              "@xorrior, @its_a_feature_",
+		MitreAttackMappings: []string{"T1547.015", "T1647"},
 		SupportedUIFeatures: []string{},
 		CommandAttributes: agentstructs.CommandAttribute{
 			SupportedOS: []string{agentstructs.SUPPORTED_OS_MACOS},
@@ -21,11 +22,12 @@ func init() {
 		CommandParameters: []agentstructs.CommandParameter{
 			{
 				Name:             "path",
-				ModalDisplayName: "Program Arguments",
+				ModalDisplayName: "Program Location",
+				DefaultValue:     "",
 				ParameterType:    agentstructs.COMMAND_PARAMETER_TYPE_STRING,
 				ParameterGroupInformation: []agentstructs.ParameterGroupInfo{
 					{
-						ParameterIsRequired: true,
+						ParameterIsRequired: false,
 						UIModalPosition:     1,
 					},
 				},
@@ -34,9 +36,10 @@ func init() {
 			{
 				Name:          "name",
 				ParameterType: agentstructs.COMMAND_PARAMETER_TYPE_STRING,
+				DefaultValue:  "",
 				ParameterGroupInformation: []agentstructs.ParameterGroupInfo{
 					{
-						ParameterIsRequired: true,
+						ParameterIsRequired: false,
 						UIModalPosition:     2,
 					},
 				},
@@ -45,7 +48,7 @@ func init() {
 			{
 				Name:          "global",
 				ParameterType: agentstructs.COMMAND_PARAMETER_TYPE_BOOLEAN,
-				DefaultValue:  true,
+				DefaultValue:  false,
 				ParameterGroupInformation: []agentstructs.ParameterGroupInfo{
 					{
 						ParameterIsRequired: false,
@@ -54,11 +57,69 @@ func init() {
 				},
 				Description: "Set this to true if the login item should be installed for all users. This requires administrative privileges",
 			},
+			{
+				Name:          "list",
+				ParameterType: agentstructs.COMMAND_PARAMETER_TYPE_BOOLEAN,
+				DefaultValue:  false,
+				ParameterGroupInformation: []agentstructs.ParameterGroupInfo{
+					{
+						ParameterIsRequired: false,
+						UIModalPosition:     4,
+					},
+				},
+				Description: "List current global and session items",
+			},
+			{
+				Name:          "remove",
+				ParameterType: agentstructs.COMMAND_PARAMETER_TYPE_BOOLEAN,
+				DefaultValue:  false,
+				ParameterGroupInformation: []agentstructs.ParameterGroupInfo{
+					{
+						ParameterIsRequired: false,
+						UIModalPosition:     5,
+					},
+				},
+				Description: "Remove the specified login item by path and name",
+			},
 		},
 		TaskFunctionCreateTasking: func(taskData *agentstructs.PTTaskMessageAllData) agentstructs.PTTaskCreateTaskingMessageResponse {
 			response := agentstructs.PTTaskCreateTaskingMessageResponse{
 				Success: true,
 				TaskID:  taskData.Task.ID,
+			}
+			path, err := taskData.Args.GetStringArg("path")
+			if err != nil {
+				response.Success = false
+				response.Error = err.Error()
+				return response
+			}
+			name, err := taskData.Args.GetStringArg("name")
+			if err != nil {
+				response.Success = false
+				response.Error = err.Error()
+				return response
+			}
+			list, err := taskData.Args.GetBooleanArg("list")
+			if err != nil {
+				response.Success = false
+				response.Error = err.Error()
+				return response
+			}
+			remove, err := taskData.Args.GetBooleanArg("remove")
+			if err != nil {
+				response.Success = false
+				response.Error = err.Error()
+				return response
+			}
+			if list {
+				displayString := fmt.Sprintf("listing session and global instances")
+				response.DisplayParams = &displayString
+			} else if remove {
+				displayString := fmt.Sprintf("to remove %s as %s", path, name)
+				response.DisplayParams = &displayString
+			} else {
+				displayString := fmt.Sprintf("to add %s as %s", path, name)
+				response.DisplayParams = &displayString
 			}
 			return response
 		},

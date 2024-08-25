@@ -2,7 +2,9 @@ package agentfunctions
 
 import (
 	"errors"
+	"fmt"
 	"github.com/MythicMeta/MythicContainer/logging"
+	"strings"
 
 	agentstructs "github.com/MythicMeta/MythicContainer/agent_structs"
 )
@@ -45,20 +47,45 @@ func init() {
 				},
 				Description: "Array of arguments to pass to the program.",
 			},
+			{
+				Name:             "env",
+				ModalDisplayName: "Environment Variables",
+				ParameterType:    agentstructs.COMMAND_PARAMETER_TYPE_ARRAY,
+				DefaultValue:     []string{},
+				ParameterGroupInformation: []agentstructs.ParameterGroupInfo{
+					{
+						ParameterIsRequired: false,
+						UIModalPosition:     3,
+					},
+				},
+				Description: "Array of environment variables to set in the format of Key=Val.",
+			},
 		},
 		TaskFunctionCreateTasking: func(taskData *agentstructs.PTTaskMessageAllData) agentstructs.PTTaskCreateTaskingMessageResponse {
 			response := agentstructs.PTTaskCreateTaskingMessageResponse{
 				Success: true,
 				TaskID:  taskData.Task.ID,
 			}
-			if path, err := taskData.Args.GetStringArg("path"); err != nil {
+			path, err := taskData.Args.GetStringArg("path")
+			if err != nil {
 				logging.LogError(err, "Failed to get path argument")
 				response.Success = false
 				response.Error = err.Error()
 				return response
+			}
+			runArgs, err := taskData.Args.GetArrayArg("args")
+			if err != nil {
+				response.Success = false
+				response.Error = err.Error()
+				return response
+			}
+			if len(runArgs) > 0 {
+				displayParams := fmt.Sprintf("%s %s", path, strings.Join(runArgs, " "))
+				response.DisplayParams = &displayParams
 			} else {
 				response.DisplayParams = &path
 			}
+
 			return response
 		},
 		TaskFunctionParseArgDictionary: func(args *agentstructs.PTTaskMessageArgsData, input map[string]interface{}) error {

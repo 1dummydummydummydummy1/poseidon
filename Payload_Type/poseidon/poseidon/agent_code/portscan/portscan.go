@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	// Poseidon
@@ -13,14 +12,9 @@ import (
 	"github.com/MythicAgents/poseidon/Payload_Type/poseidon/agent_code/pkg/utils/structs"
 )
 
-var (
-	mu                sync.Mutex
-	scanResultChannel = make(chan host)
-)
-
 type PortScanParams struct {
 	Hosts []string `json:"hosts"` // Can also be a cidr
-	Ports string   `json:"ports"`
+	Ports []string `json:"ports"`
 }
 
 func doScan(hostList []string, portListStrs []string, job *structs.Job) []CIDR {
@@ -84,15 +78,12 @@ func doScan(hostList []string, portListStrs []string, job *structs.Job) []CIDR {
 }
 
 func Run(task structs.Task) {
-	msg := structs.Response{}
-	msg.TaskID = task.TaskID
+	msg := task.NewResponse()
 	params := PortScanParams{}
 
 	err := json.Unmarshal([]byte(task.Params), &params)
 	if err != nil {
-		msg.UserOutput = err.Error()
-		msg.Completed = true
-		msg.Status = "error"
+		msg.SetError(err.Error())
 		task.Job.SendResponses <- msg
 		return
 	}
@@ -110,10 +101,8 @@ func Run(task structs.Task) {
 		task.Job.SendResponses <- msg
 		return
 	}
-
-	portStrings := strings.Split(params.Ports, ",")
 	//log.Println("Beginning portscan...")
-	results := doScan(params.Hosts, portStrings, task.Job)
+	results := doScan(params.Hosts, params.Ports, task.Job)
 	// log.Println("Finished!")
 	data, err := json.MarshalIndent(results, "", "    ")
 	// // fmt.Println("Data:", string(data))

