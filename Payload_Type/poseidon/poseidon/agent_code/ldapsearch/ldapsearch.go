@@ -8,7 +8,7 @@ import (
   "gopkg.in/ldap.v2"
   "crypto/tls"
 
-	"github.com/MythicAgents/poseidon/Payload_Type/poseidon/poseidon/agent_code/pkg/utils/structs"
+	"github.com/MythicAgents/poseidon/Payload_Type/poseidon/agent_code/pkg/utils/structs"
 )
 
 type Arguments struct {
