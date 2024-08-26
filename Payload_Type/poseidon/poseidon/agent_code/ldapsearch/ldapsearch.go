@@ -5,6 +5,7 @@ import (
   "encoding/json"
   "fmt"
   "strings"
+  "strconv"
   "gopkg.in/ldap.v2"
   "crypto/tls"
 
@@ -17,6 +18,7 @@ type Arguments struct {
         BindPassword      string `json:"bindpassword"`
         SearchFilter      string `json:"searchfilter"`
         BaseSearchDN      string `json:"basesearchdn"`
+	SizeLimit      string `json:"sizelimit"`
 
 }
 
@@ -26,6 +28,7 @@ var(
    bindPassword = ""
    searchFilter = ""
    baseSearchDN = ""
+   sizeLimit = ""
 )
 
 func Run(task structs.Task) {
@@ -42,45 +45,53 @@ func Run(task structs.Task) {
 		return
 	}
 
-	if LDAPSearch(args.ServerAddress,args.BindUser,args.BindPassword,args.SearchFilter,args.BaseSearchDN)==nil{
-		msg.UserOutput = "LDAP query executed successfully"
-		msg.Completed = true
-		task.Job.SendResponses <- msg
-	} else {
-		msg.UserOutput = "LDAP query failed"
+	outpt,err := LDAPSearch(args.ServerAddress,args.BindUser,args.BindPassword,args.SearchFilter,args.BaseSearchDN,args.SizeLimit)
+        if err != nil {
+                msg.UserOutput = err.Error()
+                msg.Completed = true
+                msg.Status = "error"
+                task.Job.SendResponses <- msg
+                return
+        } else {
+		msg.UserOutput = outpt
 		msg.Completed = true
 		task.Job.SendResponses <- msg
 	}
-
 }
 
-func LDAPSearch(serveraddress, binduser, bindpassword, searchfilter, basesearchdn string) error {
+func LDAPSearch(serveraddress, binduser, bindpassword, searchfilter, basesearchdn, sizelimit string) (string,error) {
 
   serverAddress = serveraddress
   bindUser = binduser
   bindPassword = bindpassword
   searchFilter = searchfilter
   baseSearchDN = basesearchdn
+  sizeLimit = sizelimit
 
   conn, err := establishConnection()
 
   if err != nil {
-    fmt.Printf("Connection failed. %s", err)
-    return err
+    return "nil",err
   }
 
   defer conn.Close()
 
-  if err := listEntries(conn); err != nil {
-    fmt.Printf("%v", err)
-    return err
+
+    sizelimitint, err := strconv.Atoi(sizeLimit)
+    if err != nil {
+        return "nil",err
+    }
+
+
+   rslts,err := listEntries(conn,sizelimitint)
+    if err != nil {
+    return "nil",err
   }
 
   if err := authenticateUser(conn); err != nil {
-    fmt.Printf("%v", err)
-    return err
+    return "nil",err
   }
-return nil
+return rslts,nil
 }
 
 
@@ -91,7 +102,6 @@ func establishConnection() (*ldap.Conn, error) {
     tlsConfig = &tls.Config{InsecureSkipVerify: true}
 
   conn, err := ldap.DialTLS("tcp", serverAddress, tlsConfig)
-  //conn, err := ldap.Dial("tcp", serverAddress)
 
   if err != nil {
     return nil, fmt.Errorf("Connection failed. %s", err)
@@ -104,12 +114,13 @@ func establishConnection() (*ldap.Conn, error) {
   return conn, nil
 }
 
-func listEntries(conn *ldap.Conn) error {
+
+func listEntries(conn *ldap.Conn,sizelimit int) (string,error) {
   result, err := conn.Search(ldap.NewSearchRequest(
     baseSearchDN,
     ldap.ScopeWholeSubtree,
     ldap.NeverDerefAliases,
-    0,
+    sizelimit,
     0,
     false,
     buildFilter("*"),
@@ -117,18 +128,33 @@ func listEntries(conn *ldap.Conn) error {
     nil,
   ))
 
+
   if err != nil {
-    return fmt.Errorf("Search failed. %s", err)
+    return "error",fmt.Errorf("Search failed. %s", err)
   }
 
-  // Prints all attributes per entry
-  for _, entry := range result.Entries {
-    entry.Print()
-    fmt.Println()
-  }
+    var entries []string
 
-  return nil
+    for _, entry := range result.Entries {
+        var entryDetails []string
+        entryDetails = append(entryDetails, fmt.Sprintf("DN: %s", entry.DN))
+
+        for _, attr := range entry.Attributes {
+
+            attrValues := strings.Join(attr.Values, ", ")
+            entryDetails = append(entryDetails, fmt.Sprintf("%s: %s", attr.Name, attrValues))
+        }
+
+        entryString := strings.Join(entryDetails, "\n")
+        entries = append(entries, entryString)
+    }
+
+        entriesString := strings.Join(entries, "\n\n")
+
+        return entriesString, nil
+
 }
+
 
 func authenticateUser(conn *ldap.Conn) error {
   result, err := conn.Search(ldap.NewSearchRequest(
@@ -151,14 +177,8 @@ func authenticateUser(conn *ldap.Conn) error {
     return fmt.Errorf("User not found")
   }
 
-  if len(result.Entries) > 1 {
-    return fmt.Errorf("Multiple users found")
-  }
-
   if err := conn.Bind(bindUser, bindPassword); err != nil {
-    fmt.Printf("Authentication failed. %s", err)
-  } else {
-    fmt.Printf("Authentication successful!")
+    return fmt.Errorf("Authentication failed. %s", err)
   }
 
   return nil
